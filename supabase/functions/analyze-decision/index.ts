@@ -18,7 +18,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
-    
+    const groqApiKey = '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';
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch the decision case
@@ -35,6 +36,15 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Get user role to determine AI model
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', decisionCase.user_id)
+      .single();
+
+    const isPremium = userRole?.role === 'pro' || userRole?.role === 'premium';
 
     // Prepare the prompt for AI analysis
     const prompt = `Analyze this business decision comprehensively:
@@ -69,24 +79,49 @@ Return your analysis in JSON format with these exact keys:
   "follow_up_questions": ["string"]
 }`;
 
-    // Call Lovable AI (Gemini)
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are a strategic business decision analyst. Provide comprehensive, structured analysis in valid JSON format only.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    });
+    // Call AI - Use Groq for premium/pro users, Gemini for free
+    let aiResponse;
+
+    if (isPremium) {
+      // Use Groq for premium analysis
+      aiResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an elite strategic business decision analyst with deep expertise in corporate strategy, risk management, and decision theory. Provide exceptionally detailed, nuanced analysis in valid JSON format only. Include advanced frameworks like Porter\'s Five Forces, SWOT analysis insights, and game theory considerations where applicable.'
+            },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+        }),
+      });
+    } else {
+      // Use Lovable AI (Gemini) for free tier
+      aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a strategic business decision analyst. Provide comprehensive, structured analysis in valid JSON format only.'
+            },
+            { role: 'user', content: prompt }
+          ],
+        }),
+      });
+    }
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();

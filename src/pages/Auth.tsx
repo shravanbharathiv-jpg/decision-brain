@@ -41,7 +41,8 @@ const Auth = () => {
 
       toast({
         title: "Success!",
-        description: "Please check your email to verify your account, then return to sign in.",
+        description: "Please check your email and click the verification link, then come back and sign in.",
+        duration: 10000,
       });
     } catch (error: any) {
       toast({

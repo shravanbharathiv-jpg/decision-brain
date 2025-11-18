@@ -42,6 +42,21 @@ const NewDecision = () => {
     setLoading(true);
 
     try {
+      const { data: canCreate, error: checkError } = await supabase
+        .rpc("can_create_decision", { check_user_id: userId });
+
+      if (checkError) throw checkError;
+
+      if (!canCreate) {
+        toast({
+          title: "Limit Reached",
+          description: "You've reached your monthly decision limit. Upgrade to create more.",
+          variant: "destructive",
+        });
+        navigate("/pricing");
+        return;
+      }
+
       const { data: newCase, error: insertError } = await supabase
         .from("decision_cases")
         .insert({

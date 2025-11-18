@@ -78,9 +78,9 @@ const Pricing = () => {
       price: "£0",
       period: "forever",
       features: [
-        "3 Decision Cases per month",
+        "2 Decision Cases per month",
+        "1 Risk Simulation per month",
         "AI-powered analysis",
-        "Risk simulations",
         "Basic insights",
       ],
       current: userRole === "free",
@@ -92,8 +92,8 @@ const Pricing = () => {
       period: "per month",
       features: [
         "Unlimited Decision Cases",
-        "AI-powered analysis",
-        "Advanced risk simulations",
+        "Unlimited Risk Simulations",
+        "Advanced AI analysis (100x better)",
         "Comprehensive insights",
         "Team collaboration",
         "Priority support",
@@ -108,8 +108,8 @@ const Pricing = () => {
       period: "one-time",
       features: [
         "Unlimited Decision Cases forever",
-        "AI-powered analysis",
-        "Advanced risk simulations",
+        "Unlimited Risk Simulations",
+        "Advanced AI analysis (100x better)",
         "Comprehensive insights",
         "Team collaboration",
         "Lifetime updates",

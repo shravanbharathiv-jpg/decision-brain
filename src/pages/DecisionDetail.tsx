@@ -8,7 +8,6 @@ import { ArrowLeft, Brain, AlertTriangle, TrendingUp, Loader2, History } from "l
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import TeamManager from "@/components/TeamManager";
 
 const DecisionDetail = () => {
   const { id } = useParams();
@@ -21,7 +20,6 @@ const DecisionDetail = () => {
   const [analysis, setAnalysis] = useState<any>(null);
   const [simulation, setSimulation] = useState<any>(null);
   const [revisions, setRevisions] = useState<any[]>([]);
-  const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -33,7 +31,6 @@ const DecisionDetail = () => {
       navigate("/auth");
       return;
     }
-    setUserId(session.user.id);
     loadData();
   };
 
@@ -116,24 +113,6 @@ const DecisionDetail = () => {
   const handleSimulate = async () => {
     setSimulating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const { data: canCreate, error: checkError } = await supabase
-        .rpc("can_create_simulation", { check_user_id: session.user.id });
-
-      if (checkError) throw checkError;
-
-      if (!canCreate) {
-        toast({
-          title: "Limit Reached",
-          description: "You've reached your monthly simulation limit. Upgrade to continue.",
-          variant: "destructive",
-        });
-        navigate("/pricing");
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke("simulate-risk", {
         body: { caseId: id },
       });
@@ -210,7 +189,6 @@ const DecisionDetail = () => {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="analysis">Analysis</TabsTrigger>
             <TabsTrigger value="simulation">Risk Simulation</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
           </TabsList>
 
@@ -433,10 +411,6 @@ const DecisionDetail = () => {
                 </Card>
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="team">
-            <TeamManager caseId={id!} userId={userId} />
           </TabsContent>
 
           <TabsContent value="timeline">

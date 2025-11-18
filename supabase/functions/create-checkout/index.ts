@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,8 +14,8 @@ serve(async (req) => {
 
   try {
     const { userId, plan } = await req.json();
-
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+    
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeKey) {
       throw new Error('Stripe secret key not configured');
     }
@@ -25,57 +24,38 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Define pricing
+    const prices: Record<string, { amount: number; mode: string }> = {
+      pro: { amount: 1000, mode: 'subscription' }, // £10/month
+      premium: { amount: 5000, mode: 'payment' },  // £50 one-time
+    };
 
-    // Get product details from database
-    const { data: productData, error: productError } = await supabase
-      .from('stripe_products')
-      .select('*')
-      .eq('plan_name', plan)
-      .single();
-
-    if (productError || !productData) {
-      throw new Error('Product not found in database');
-    }
-
-    // If price_id doesn't exist, create it dynamically
-    let priceId = productData.stripe_price_id;
-
-    if (!priceId && productData.stripe_product_id) {
-      const priceData: any = {
-        product: productData.stripe_product_id,
-        unit_amount: productData.amount,
-        currency: productData.currency,
-      };
-
-      if (productData.interval === 'month') {
-        priceData.recurring = { interval: 'month' };
-      }
-
-      const price = await stripe.prices.create(priceData);
-      priceId = price.id;
-
-      // Update database with new price ID
-      await supabase
-        .from('stripe_products')
-        .update({ stripe_price_id: priceId })
-        .eq('plan_name', plan);
-    }
-
-    if (!priceId) {
-      throw new Error('Unable to create or find price for product');
+    const selectedPrice = prices[plan];
+    if (!selectedPrice) {
+      throw new Error('Invalid plan selected');
     }
 
     const sessionConfig: any = {
+      customer_email: undefined, // Will be set from user metadata
       line_items: [
         {
-          price: priceId,
+          price_data: {
+            currency: 'gbp',
+            product_data: {
+              name: plan === 'pro' ? 'Decision Hub Pro' : 'Decision Hub Lifetime',
+              description: plan === 'pro' 
+                ? 'Unlimited decisions, advanced features, £10/month'
+                : 'Unlimited decisions forever, £50 one-time payment',
+            },
+            unit_amount: selectedPrice.amount,
+            ...(selectedPrice.mode === 'subscription' && {
+              recurring: { interval: 'month' },
+            }),
+          },
           quantity: 1,
         },
       ],
-      mode: productData.interval === 'month' ? 'subscription' : 'payment',
+      mode: selectedPrice.mode,
       success_url: `${req.headers.get('origin')}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get('origin')}/pricing`,
       metadata: {

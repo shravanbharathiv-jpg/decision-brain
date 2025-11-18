@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Brain, Plus, TrendingUp, AlertTriangle, LogOut, Crown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import NotificationsBell from "@/components/NotificationsBell";
 
 interface DecisionCase {
   id: string;
@@ -25,10 +24,6 @@ const Dashboard = () => {
   const [insights, setInsights] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("free");
   const [userId, setUserId] = useState<string>("");
-  const [userEmail, setUserEmail] = useState<string>("");
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [decisionsThisMonth, setDecisionsThisMonth] = useState<number>(0);
-  const [simulationsThisMonth, setSimulationsThisMonth] = useState<number>(0);
 
   useEffect(() => {
     checkAuth();
@@ -42,7 +37,6 @@ const Dashboard = () => {
     }
 
     setUserId(session.user.id);
-    setUserEmail(session.user.email || "");
     loadData(session.user.id);
     loadUserRole(session.user.id);
   };
@@ -50,15 +44,12 @@ const Dashboard = () => {
   const loadUserRole = async (uid: string) => {
     const { data } = await supabase
       .from("user_roles")
-      .select("role, is_admin, decisions_this_month, simulations_this_month")
+      .select("role")
       .eq("user_id", uid)
       .single();
-
+    
     if (data) {
       setUserRole(data.role);
-      setIsAdmin(data.is_admin || false);
-      setDecisionsThisMonth(data.decisions_this_month || 0);
-      setSimulationsThisMonth(data.simulations_this_month || 0);
     }
   };
 
@@ -100,37 +91,13 @@ const Dashboard = () => {
     navigate("/auth");
   };
 
-  const canCreateMore = userRole !== "free" || decisionsThisMonth < 2;
+  const casesThisMonth = cases.filter(c => {
+    const caseDate = new Date(c.created_at);
+    const now = new Date();
+    return caseDate.getMonth() === now.getMonth() && caseDate.getFullYear() === now.getFullYear();
+  }).length;
 
-  const handlePlanSwitch = async (newRole: string) => {
-    if (!isAdmin && userEmail !== "shravanbvidhya@gmail.com") {
-      toast({
-        title: "Access Denied",
-        description: "Only admin users can switch plans freely",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { error } = await supabase
-      .from("user_roles")
-      .update({ role: newRole })
-      .eq("user_id", userId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update plan",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: `Plan updated to ${newRole}`,
-      });
-      loadUserRole(userId);
-    }
-  };
+  const canCreateMore = userRole !== "free" || casesThisMonth < 3;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -143,7 +110,6 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold">Decision Intelligence Hub</h1>
           </div>
           <div className="flex items-center gap-3">
-            <NotificationsBell userId={userId} />
             {userRole === "free" && (
               <Button variant="outline" onClick={() => navigate("/pricing")} className="gap-2">
                 <Crown className="w-4 h-4" />
@@ -198,54 +164,43 @@ const Dashboard = () => {
             <div className="grid gap-6 md:grid-cols-3 mb-8">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Decisions This Month</CardTitle>
+                  <CardTitle className="text-lg">Total Decisions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-4xl font-bold text-primary">{decisionsThisMonth}</p>
-                  {userRole === "free" && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {2 - decisionsThisMonth} remaining on Free plan
-                    </p>
-                  )}
+                  <p className="text-4xl font-bold text-primary">{cases.length}</p>
                 </CardContent>
               </Card>
-
+              
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Simulations This Month</CardTitle>
+                  <CardTitle className="text-lg">This Month</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-4xl font-bold text-accent">{simulationsThisMonth}</p>
+                  <p className="text-4xl font-bold text-accent">{casesThisMonth}</p>
                   {userRole === "free" && (
                     <p className="text-sm text-muted-foreground mt-2">
-                      {1 - simulationsThisMonth} remaining on Free plan
+                      {3 - casesThisMonth} remaining on Free plan
                     </p>
                   )}
                 </CardContent>
               </Card>
-
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Plan</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold capitalize">{userRole}</p>
-                  {isAdmin || userEmail === "shravanbvidhya@gmail.com" ? (
-                    <div className="flex gap-2 mt-2">
-                      <Button size="sm" variant={userRole === "free" ? "default" : "outline"} onClick={() => handlePlanSwitch("free")}>Free</Button>
-                      <Button size="sm" variant={userRole === "pro" ? "default" : "outline"} onClick={() => handlePlanSwitch("pro")}>Pro</Button>
-                      <Button size="sm" variant={userRole === "premium" ? "default" : "outline"} onClick={() => handlePlanSwitch("premium")}>Premium</Button>
-                    </div>
-                  ) : userRole === "free" ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
+                  {userRole === "free" && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
                       className="mt-2"
                       onClick={() => navigate("/pricing")}
                     >
                       Upgrade Plan
                     </Button>
-                  ) : null}
+                  )}
                 </CardContent>
               </Card>
             </div>

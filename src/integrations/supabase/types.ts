@@ -53,6 +53,142 @@ export type Database = {
         }
         Relationships: []
       }
+      decision_analyses: {
+        Row: {
+          blind_spots: Json | null
+          case_id: string
+          created_at: string
+          decision_paths: Json | null
+          effects_tradeoffs: Json | null
+          follow_up_questions: Json | null
+          id: string
+          key_arguments: Json | null
+          probability_reasoning: string | null
+          recommended_path: string | null
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          blind_spots?: Json | null
+          case_id: string
+          created_at?: string
+          decision_paths?: Json | null
+          effects_tradeoffs?: Json | null
+          follow_up_questions?: Json | null
+          id?: string
+          key_arguments?: Json | null
+          probability_reasoning?: string | null
+          recommended_path?: string | null
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          blind_spots?: Json | null
+          case_id?: string
+          created_at?: string
+          decision_paths?: Json | null
+          effects_tradeoffs?: Json | null
+          follow_up_questions?: Json | null
+          id?: string
+          key_arguments?: Json | null
+          probability_reasoning?: string | null
+          recommended_path?: string | null
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_analyses_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "decision_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decision_cases: {
+        Row: {
+          additional_text: string | null
+          constraints: string | null
+          context: string | null
+          created_at: string
+          description: string
+          id: string
+          objectives: string | null
+          risks: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          additional_text?: string | null
+          constraints?: string | null
+          context?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          objectives?: string | null
+          risks?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          additional_text?: string | null
+          constraints?: string | null
+          context?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          objectives?: string | null
+          risks?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      decision_revisions: {
+        Row: {
+          case_id: string
+          content: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          revision_type: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          revision_type: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          revision_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_revisions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "decision_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -136,6 +272,50 @@ export type Database = {
           },
         ]
       }
+      risk_simulations: {
+        Row: {
+          best_case: Json | null
+          case_id: string
+          created_at: string
+          expected_value: Json | null
+          id: string
+          probability_data: Json | null
+          simulation_results: Json | null
+          user_id: string
+          worst_case: Json | null
+        }
+        Insert: {
+          best_case?: Json | null
+          case_id: string
+          created_at?: string
+          expected_value?: Json | null
+          id?: string
+          probability_data?: Json | null
+          simulation_results?: Json | null
+          user_id: string
+          worst_case?: Json | null
+        }
+        Update: {
+          best_case?: Json | null
+          case_id?: string
+          created_at?: string
+          expected_value?: Json | null
+          id?: string
+          probability_data?: Json | null
+          simulation_results?: Json | null
+          user_id?: string
+          worst_case?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_simulations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "decision_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -180,6 +360,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      team_members: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          invited_user_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          invited_user_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          invited_user_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "decision_cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

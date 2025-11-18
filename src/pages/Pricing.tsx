@@ -93,7 +93,7 @@ const Pricing = () => {
       features: [
         "Unlimited Decision Cases",
         "Unlimited Risk Simulations",
-        "Advanced AI analysis (100x better)",
+        "3x more detailed AI analysis",
         "Comprehensive insights",
         "Team collaboration",
         "Priority support",
@@ -109,8 +109,8 @@ const Pricing = () => {
       features: [
         "Unlimited Decision Cases forever",
         "Unlimited Risk Simulations",
-        "Advanced AI analysis (100x better)",
-        "Comprehensive insights",
+        "3x more detailed AI analysis",
+        "50% more accurate insights",
         "Team collaboration",
         "Lifetime updates",
         "Premium support",

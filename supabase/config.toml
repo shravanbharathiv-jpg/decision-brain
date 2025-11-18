@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.accept-invitation]
 verify_jwt = true
+
+[functions.setup-stripe-products]
+verify_jwt = false

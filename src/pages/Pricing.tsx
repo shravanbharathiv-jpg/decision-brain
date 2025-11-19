@@ -5,9 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, Crown, Loader2 } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 const Pricing = () => {
   const navigate = useNavigate();
@@ -46,10 +43,6 @@ const Pricing = () => {
   const handleUpgrade = async (plan: "pro" | "premium") => {
     setLoading(plan);
     try {
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error("Stripe failed to load");
-
-      // Create checkout session
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { 
           userId,
@@ -58,9 +51,10 @@ const Pricing = () => {
       });
 
       if (error) throw error;
+      if (!data?.url) throw new Error("No checkout URL received");
 
       // Redirect to Stripe Checkout
-      window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+      window.location.href = data.url;
     } catch (error: any) {
       toast({
         title: "Error",

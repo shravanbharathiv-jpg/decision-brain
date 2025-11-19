@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, AlertTriangle, TrendingUp, Loader2, History } from "lucide-react";
+import { ArrowLeft, Brain, AlertTriangle, TrendingUp, Loader2, History, Download, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { TeamCollaborationDialog } from "@/components/TeamCollaborationDialog";
 
 const DecisionDetail = () => {
   const { id } = useParams();
@@ -20,6 +21,9 @@ const DecisionDetail = () => {
   const [analysis, setAnalysis] = useState<any>(null);
   const [simulation, setSimulation] = useState<any>(null);
   const [revisions, setRevisions] = useState<any[]>([]);
+  const [userId, setUserId] = useState<string>("");
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -31,6 +35,7 @@ const DecisionDetail = () => {
       navigate("/auth");
       return;
     }
+    setUserId(session.user.id);
     loadData();
   };
 
@@ -136,6 +141,43 @@ const DecisionDetail = () => {
     }
   };
 
+  const handleExport = async (format: "pdf" | "csv") => {
+    setExporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("export-decision", {
+        body: { caseId: id, format },
+      });
+
+      if (error) throw error;
+
+      if (format === "pdf") {
+        const blob = new Blob([data], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+      } else {
+        const blob = new Blob([data], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `decision-${id}.csv`;
+        a.click();
+      }
+
+      toast({
+        title: "Export successful",
+        description: `Decision exported as ${format.toUpperCase()}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -171,6 +213,12 @@ const DecisionDetail = () => {
           </div>
           <h1 className="text-2xl font-bold flex-1">{decisionCase.title}</h1>
           <div className="flex gap-2">
+            <Button onClick={() => setTeamDialogOpen(true)} variant="outline" size="icon">
+              <Users className="w-4 h-4" />
+            </Button>
+            <Button onClick={() => handleExport("csv")} disabled={exporting} variant="outline" size="icon">
+              <Download className="w-4 h-4" />
+            </Button>
             <Button onClick={handleAnalyze} disabled={analyzing} variant="outline">
               {analyzing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {analyzing ? "Analyzing..." : "Re-Analyze"}
@@ -442,6 +490,13 @@ const DecisionDetail = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <TeamCollaborationDialog
+        open={teamDialogOpen}
+        onOpenChange={setTeamDialogOpen}
+        caseId={id || ""}
+        userId={userId}
+      />
     </div>
   );
 };

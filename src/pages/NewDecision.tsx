@@ -7,13 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, Loader2 } from "lucide-react";
+import { ArrowLeft, Brain, Loader2, Crown } from "lucide-react";
 
 const NewDecision = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>("free");
+  const [casesThisMonth, setCasesThisMonth] = useState(0);
+  const [checkingLimit, setCheckingLimit] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -35,10 +38,64 @@ const NewDecision = () => {
       return;
     }
     setUserId(session.user.id);
+    await checkPlanLimit(session.user.id);
+  };
+
+  const checkPlanLimit = async (uid: string) => {
+    setCheckingLimit(true);
+    try {
+      // Get user role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", uid)
+        .single();
+      
+      if (roleData) {
+        setUserRole(roleData.role);
+      }
+
+      // Count cases this month
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      
+      const { count } = await supabase
+        .from("decision_cases")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", uid)
+        .gte("created_at", firstDay);
+
+      setCasesThisMonth(count || 0);
+
+      // Check if limit exceeded
+      if (roleData?.role === "free" && (count || 0) >= 3) {
+        toast({
+          title: "Limit reached",
+          description: "You've reached your monthly limit of 3 decisions. Upgrade to create unlimited decisions.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error checking limit:", error);
+    } finally {
+      setCheckingLimit(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check plan limits
+    if (userRole === "free" && casesThisMonth >= 3) {
+      toast({
+        title: "Upgrade required",
+        description: "Free plan allows 3 decisions per month. Upgrade for unlimited decisions.",
+        variant: "destructive",
+      });
+      navigate("/pricing");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -102,6 +159,25 @@ const NewDecision = () => {
             <CardDescription>
               Provide details about your decision. The more context you provide, the better the AI analysis.
             </CardDescription>
+            {userRole === "free" && (
+              <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                <p className="text-sm">
+                  <strong>Free Plan:</strong> {casesThisMonth}/3 decisions used this month.
+                  {casesThisMonth >= 3 ? (
+                    <span className="text-destructive"> Limit reached. </span>
+                  ) : (
+                    <span> {3 - casesThisMonth} remaining. </span>
+                  )}
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 ml-1"
+                    onClick={() => navigate("/pricing")}
+                  >
+                    Upgrade for unlimited
+                  </Button>
+                </p>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -187,15 +263,13 @@ const NewDecision = () => {
                 <Button type="button" variant="outline" onClick={() => navigate("/")} disabled={loading}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading} className="flex-1">
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating & Analyzing...
-                    </>
-                  ) : (
-                    "Create Decision"
-                  )}
+                <Button 
+                  type="submit" 
+                  disabled={loading || checkingLimit || (userRole === "free" && casesThisMonth >= 3)} 
+                  className="flex-1"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {loading ? "Creating..." : "Create Decision Case"}
                 </Button>
               </div>
             </form>

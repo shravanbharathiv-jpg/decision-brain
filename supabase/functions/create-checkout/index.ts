@@ -67,7 +67,7 @@ serve(async (req) => {
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify({ url: session.url }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
